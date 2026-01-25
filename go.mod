@@ -1,6 +1,6 @@
 module github.com/its-the-vibe/RedisRelay
 
-go 1.24.12
+go 1.25.5
 
 require (
 	github.com/redis/go-redis/v9 v9.17.2

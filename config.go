@@ -33,5 +33,9 @@ func LoadConfig(filepath string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
+	if config.Redis.Password == "" {
+		config.Redis.Password = os.Getenv("REDIS_PASSWORD")
+	}
+
 	return &config, nil
 }
