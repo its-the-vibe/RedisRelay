@@ -38,11 +38,7 @@ func main() {
 	}
 	log.Println("Successfully connected to Redis")
 
-	// Create a pubsub instance
-	pubsub := redisClient.PSubscribe(ctx)
-	defer pubsub.Close()
-
-	// Subscribe to all configured channels
+	// Prepare list of channels to subscribe to
 	channels := make([]string, 0, len(config.Mappings))
 	for channel := range config.Mappings {
 		channels = append(channels, channel)
@@ -52,40 +48,64 @@ func main() {
 		log.Fatal("No channel mappings configured")
 	}
 
-	if err := pubsub.Subscribe(ctx, channels...); err != nil {
-		log.Fatalf("Failed to subscribe to channels: %v", err)
-	}
+	// Create a pubsub instance and subscribe to channels
+	pubsub := redisClient.Subscribe(ctx, channels...)
+	defer pubsub.Close()
 
 	log.Printf("Subscribed to channels: %v", channels)
+
+	// Create a cancellable context for graceful shutdown
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	// Setup signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start message processing
-	go processMessages(ctx, pubsub, redisClient, config.Mappings)
+	// Start message processing with a done channel
+	done := make(chan struct{})
+	go processMessages(ctx, pubsub, redisClient, config.Mappings, done)
 
 	// Wait for termination signal
 	<-sigChan
 	log.Println("Shutting down gracefully...")
+
+	// Cancel context to stop processing new messages
+	cancel()
+
+	// Wait for message processing to complete
+	<-done
+	log.Println("Shutdown complete")
 }
 
 // processMessages processes incoming messages from subscribed channels
-func processMessages(ctx context.Context, pubsub *redis.PubSub, client *redis.Client, mappings map[string]string) {
+func processMessages(ctx context.Context, pubsub *redis.PubSub, client *redis.Client, mappings map[string]string, done chan struct{}) {
+	defer close(done)
 	ch := pubsub.Channel()
 
-	for msg := range ch {
-		targetQueue, ok := mappings[msg.Channel]
-		if !ok {
-			log.Printf("No mapping found for channel: %s", msg.Channel)
-			continue
-		}
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Message processing stopped")
+			return
+		case msg, ok := <-ch:
+			if !ok {
+				log.Println("Channel closed")
+				return
+			}
 
-		// Push the message payload to the target Redis list
-		if err := client.RPush(ctx, targetQueue, msg.Payload).Err(); err != nil {
-			log.Printf("Failed to push message to queue %s: %v", targetQueue, err)
-		} else {
-			log.Printf("Message from channel %s pushed to queue %s", msg.Channel, targetQueue)
+			targetQueue, ok := mappings[msg.Channel]
+			if !ok {
+				log.Printf("No mapping found for channel: %s", msg.Channel)
+				continue
+			}
+
+			// Push the message payload to the target Redis list
+			if err := client.RPush(ctx, targetQueue, msg.Payload).Err(); err != nil {
+				log.Printf("Failed to push message to queue %s: %v", targetQueue, err)
+			} else {
+				log.Printf("Message from channel %s pushed to queue %s", msg.Channel, targetQueue)
+			}
 		}
 	}
 }
