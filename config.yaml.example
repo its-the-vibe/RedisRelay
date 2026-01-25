@@ -1,0 +1,12 @@
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+# Map channel names to queue names
+# When a message is received on a channel (key), it will be pushed to the corresponding queue (value)
+mappings:
+  events: events-queue
+  notifications: notifications-queue
+  logs: logs-queue
