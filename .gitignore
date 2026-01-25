@@ -30,3 +30,9 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Application binary
+redisrelay
+
+# Configuration file (use .example as template)
+config.yaml
