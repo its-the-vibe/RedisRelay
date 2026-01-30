@@ -3,7 +3,7 @@ module github.com/its-the-vibe/RedisRelay
 go 1.25.5
 
 require (
-	github.com/redis/go-redis/v9 v9.17.2
+	github.com/redis/go-redis/v9 v9.17.3
 	gopkg.in/yaml.v3 v3.0.1
 )
 
