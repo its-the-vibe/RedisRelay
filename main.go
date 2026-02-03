@@ -79,7 +79,7 @@ func main() {
 }
 
 // processMessages processes incoming messages from subscribed channels
-func processMessages(ctx context.Context, pubsub *redis.PubSub, client *redis.Client, mappings map[string]string, done chan struct{}) {
+func processMessages(ctx context.Context, pubsub *redis.PubSub, client *redis.Client, mappings map[string][]string, done chan struct{}) {
 	defer close(done)
 	ch := pubsub.Channel()
 
@@ -94,17 +94,19 @@ func processMessages(ctx context.Context, pubsub *redis.PubSub, client *redis.Cl
 				return
 			}
 
-			targetQueue, ok := mappings[msg.Channel]
+			targetQueues, ok := mappings[msg.Channel]
 			if !ok {
 				log.Printf("No mapping found for channel: %s", msg.Channel)
 				continue
 			}
 
-			// Push the message payload to the target Redis list
-			if err := client.RPush(ctx, targetQueue, msg.Payload).Err(); err != nil {
-				log.Printf("Failed to push message to queue %s: %v", targetQueue, err)
-			} else {
-				log.Printf("Message from channel %s pushed to queue %s", msg.Channel, targetQueue)
+			// Push the message payload to all target Redis queues
+			for _, targetQueue := range targetQueues {
+				if err := client.RPush(ctx, targetQueue, msg.Payload).Err(); err != nil {
+					log.Printf("Failed to push message to queue %s: %v", targetQueue, err)
+				} else {
+					log.Printf("Message from channel %s pushed to queue %s", msg.Channel, targetQueue)
+				}
 			}
 		}
 	}
