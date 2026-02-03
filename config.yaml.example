@@ -4,8 +4,23 @@ redis:
   db: 0
 
 # Map channel names to queue names
-# When a message is received on a channel (key), it will be pushed to the corresponding queue (value)
+# When a message is received on a channel (key), it will be pushed to the corresponding queue(s) (value)
+# 
+# Supports two formats:
+# 1. Single queue (backward compatible):
+#    channel-name: queue-name
+# 
+# 2. Multiple queues (one-to-many):
+#    channel-name:
+#      - queue-name-1
+#      - queue-name-2
+#
 mappings:
-  events: events-queue
+  # Single queue mapping
   notifications: notifications-queue
   logs: logs-queue
+  
+  # Multiple queue mapping (fan-out pattern)
+  events:
+    - events-queue
+    - audit-queue

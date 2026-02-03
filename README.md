@@ -27,9 +27,14 @@ redis:
   db: 0
 
 mappings:
-  events: events-queue
+  # Single queue mapping
   notifications: notifications-queue
   logs: logs-queue
+  
+  # Multiple queue mapping (fan-out pattern)
+  events:
+    - events-queue
+    - audit-queue
 ```
 
 ### Configuration Options
@@ -39,6 +44,8 @@ mappings:
 - `redis.password`: Redis authentication password (optional)
 - `redis.db`: Redis database number
 - `mappings`: Map of channel names (keys) to queue names (values)
+  - **Single queue**: Use a string value for one-to-one mapping
+  - **Multiple queues**: Use an array of strings for one-to-many mapping (fan-out pattern)
 
 ## Running Locally
 
@@ -116,7 +123,9 @@ docker run -v $(pwd)/config.yaml:/config.yaml:ro \
 1. The service reads the configuration file to get Redis connection details and channel mappings
 2. It connects to the Redis server and subscribes to all configured channels
 3. When a message is published to a subscribed channel, the service receives it
-4. The message payload is pushed to the corresponding Redis list using RPUSH
+4. The message payload is pushed to the corresponding Redis list(s) using RPUSH
+   - For single queue mappings, the message is pushed to one queue
+   - For multiple queue mappings (fan-out), the message is pushed to all configured queues
 5. The process continues until the service is terminated
 
 ## Testing
