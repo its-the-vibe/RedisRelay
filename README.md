@@ -1,5 +1,7 @@
 # RedisRelay
 
+[![CI](https://github.com/its-the-vibe/RedisRelay/actions/workflows/ci.yaml/badge.svg)](https://github.com/its-the-vibe/RedisRelay/actions/workflows/ci.yaml)
+
 A simple Go service that subscribes to Redis channels and publishes messages to Redis lists.
 
 ## Overview
@@ -46,6 +48,20 @@ mappings:
 - `mappings`: Map of channel names (keys) to queue names (values)
   - **Single queue**: Use a string value for one-to-one mapping
   - **Multiple queues**: Use an array of strings for one-to-many mapping (fan-out pattern)
+
+## Development
+
+### Makefile Targets
+
+A `Makefile` is provided to simplify common development tasks:
+
+| Target | Description |
+|--------|-------------|
+| `make build` | Compile the binary (`redisrelay`) |
+| `make test` | Run all unit tests |
+| `make lint` | Run `go vet` for static analysis |
+| `make ci` | Run tests and lint (used in CI) |
+| `make clean` | Remove the compiled binary |
 
 ## Running Locally
 
