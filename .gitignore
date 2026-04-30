@@ -33,6 +33,7 @@ go.work.sum
 
 # Application binary
 redisrelay
+RedisRelay
 
 # Configuration file (use .example as template)
 config.yaml
