@@ -1,24 +1,25 @@
 # Build stage
-FROM golang:1.26.6-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /build
 
-# Copy all source files
+# Copy go mod and source files
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags="-s -w" -o redisrelay .
 
-# Download dependencies and build
-# Note: If you encounter TLS errors during build, ensure your Docker environment has proper CA certificates
-RUN go mod download && \
-    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o redisrelay .
-
-# Runtime stage
-FROM scratch
-
-# Copy CA certificates for HTTPS connections if needed
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Runtime stage (distroless)
+FROM gcr.io/distroless/static-debian13:nonroot
 
 # Copy the binary from builder
 COPY --from=builder /build/redisrelay /redisrelay
+
+USER nonroot:nonroot
 
 # Set the entrypoint
 ENTRYPOINT ["/redisrelay"]
